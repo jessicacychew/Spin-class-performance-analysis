@@ -1,0 +1,491 @@
+# Extracting data from Gmail messages with Google App Scripts
+*Author: Jessica Chew | Date: 19th July 2021 | [GitHub](https://github.com/jessicacychew)*
+
+#### I have been attending a spin studio that uses smart bikes (fancy!) and after each session I receive an e-mail summarising my key metrics such as miles travelled, calories burned, average RPMs and class rank amongst other things. 🚲
+#### I was curious as to my performance trends over time and given that I can't access the studio's app for reporting, I decided to scrape the data from each individual e-mail into a dataset for analysis and visualisation. Please find below a walkthrough of how to extract and refine data from Gmail.
+
+### Data extraction with Google Apps Script. What are Google Apps Scripts?
+* A JavaScript based scripting language
+* Built into Google apps e.g., Google Sheets, Google Docs, Gmail etc
+* Written in Google Chrome's own script editor
+* Automates tasks in Google apps
+* Runs on Google's servers
+
+In short, it's JavaScript in a native Google environment that is very nifty!
+
+### The original spin class data
+Here is an example of the spin class' performance summary e-mail. 
+![](/Users/jessicachew/Documents/R training/muck_around/rukus_screen_shot.png)
+
+Our objective is extract, transform and load the key metrics from each of these spin class e-mails into a dataframe ready for analysis. 
+
+Target metrics:
+
+* Calories
+* Distance
+* Points
+* Avg RPM
+* Max RPM
+* Avg Watts
+* Max Watts
+
+The overall process is: 
+
+1. Use Gmail App Scripts to extract the data from Gmail into a Google sheet.
+2. Pipe the Google sheet data into a SQL or other scripting environent for efficient manipulation.
+3. Pre-process the raw e-mail data and parse out relevant metrics to create final dataset ready for analysis.
+
+For steps 2 & 3 I will provide both a BigQuery and Python option. 
+
+The raw data pulled straight out of Google sheets is also available in my [GitHub repo](https://github.com/jessicacychew/Spin-class-performance-analysis) under 'rukus_results_raw.csv'.
+
+###Step 1 - Using Gmail App Scripts to extract the data from Gmail into a Google sheet.
+First and foremost credit must go to Code Wondo and his extremely helpful YouTube tutorial [here](https://www.youtube.com/watch?v=gdgCVqtcIw4&ab_channel=CodeWondo). As he has already done an excellent job in his tutorial, I highly recommend watching his video for the broad stroke overview of how to open a fresh Google sheet, access the scripting environment, grant access permissions and get started with key syntax. 
+
+Here is what my raw ride results data look like freshly pulled from my Gmail to Google sheets. (Note I hard coded the column headers)
+![](/Users/jessicachew/Documents/R training/muck_around/rukus_into_googlesheet.png)
+
+Please find below the code I used to extract the date, sender, subject and body content from each individual spin class e-mail. 
+
+
+```
+///Google Apps Script begin///
+function onOpen(e) {
+  var ui = SpreadsheetApp.getUi();
+  ui.createMenu("Jessica's Menu").addItem("Get e-mails", "getGmailEmails").addToUi();
+}
+
+function getGmailEmails(){
+  var label = GmailApp.getUserLabelByName("Rideresults");
+  var threads = label.getThreads();
+
+  for(var i = threads.length - 1; i >=0; i-- ) {
+    var messages = threads[i].getMessages();
+
+    for (var j = 0; j <messages.length; j++){
+      var message = messages[j];
+      extractDetails (message);
+
+    }
+  }
+}
+function extractDetails(message){
+  var dateTime = message.getDate();
+  var subjectText = message.getSubject();
+  var senderDetails = message.getFrom();
+  var bodyContents =  message.getPlainBody();
+
+  var activeSheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  activeSheet.appendRow([dateTime, senderDetails, subjectText, bodyContents])
+}
+///Script end///
+```
+### Step 2: BigQuery (BQ) approach - Piping in data to a scripting environment
+#### For Python approach, please see below.
+Fab! You have now pulled your e-mail data into a spreadsheet at scale! But of course any data we encounter in the wild is going to be messy. There are many ways to manipulate and clean up dataframes, from Excel, Google sheets, Python and R amongst others. SQL is my default weapon of choice. (That's what you get for cutting your analytics teeth as a straight up data analyst - but I digress.) 
+
+I have a [free tier account](https://cloud.google.com/free/?gclid=Cj0KCQjw_8mHBhClARIsABfFgpjrah5ClIsBnwJh5sCZNK70IXVwezo7fA8LPfvk65ttnkKLixF4-ioaArX9EALw_wcB&gclsrc=aw.ds) with Google Cloud Platform which allows me access to BigQuery (done are my days wrangling MySQL instances and its clunky interface). 
+
+Since I only have the free sandbox version of BQ, I cannot stream in the Google sheets data using commands. Instead I will use the BQ console to manually create a table of raw spin class results. You can also use whatever version of SQL you have access to. You can pipe the data in per your familiarity and rejoin us at step 3. 
+
+BQ manual load steps:
+
+1. Create a project in your BQ space. I called my project 'rukus'.
+![](/Users/jessicachew/Documents/R training/muck_around/pin_project.png)
+
+2. Go back to your Google sheet and copy the sharing link by clicking on the top right green 'Share' button. The sheet does not need to be made public.
+
+3. On BQ in the Query Editor of your new project, click the '+' button to create a new table.
+![](/Users/jessicachew/Documents/R training/muck_around/create_table_button.png)
+
+4. Follow the prompts below to ingest the Google sheet data into a table in BQ.
+![](/Users/jessicachew/Documents/R training/muck_around/create_table.png)
+
+5. Great, we've now piped in the Google sheets data into BQ - ready for speedier code-based data transformation. 
+![](/Users/jessicachew/Documents/R training/muck_around/raw_data_bq.png)
+
+### Step 3 - Pre-process the raw e-mail data and parse out relevant metrics to create final dataset ready for analysis.
+
+The exciting part - we are now ready to cleanse and parse out the relevant spin class metrics into a squeaky clean dataset! Here's what we're aiming for.
+
+![](/Users/jessicachew/Documents/R training/muck_around/clean_result_head.png)
+
+
+
+Please find detailed comments on each element of the query below to achieve the above output.
+
+```
+#### Query starts
+### QUERY PART 1 OF 3 - Pipe in Google sheets data and transform the body of the e-mail into shorter, relevant strings for parsing at later stage.
+WITH results_stage AS
+(
+SELECT cast(date as date) ride_date, REGEXP_EXTRACT(REPLACE(REPLACE(REPLACE(body, '\r', ''), '\n', ''), " ",""), r"^.{200}") body_clean
+## Above replace and regex statements remove the carriage lines from the raw data, eliminates all blank spaces to concatenate all characters and finally keeps only the first 200 characters as they carry relevant data. 
+FROM `boxwood-airport-304120.rukus.rukus_results_raw`
+WHERE 1=1
+AND Date is not null
+AND LOWER(Body) NOT LIKE '%impulse%' -- we are only interested in the Rukus Prime rides
+)
+
+### QUERY PART 2 OF 3 - Parsing out relevant data from soupy strings to create output dataset
+
+, results_clean AS
+
+(SELECT 
+ride_date
+,body_clean 
+,REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)...CALORIES"), r"\d+") calories 
+##Nested REGEX: First gather the three characters before the string 'calories' plus the string itself (expressed by the three full stops), and then only return digits of those results. Key assumption: Calories burned do not exceed three digits.
+
+,REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)...POINTS"), r"\d+") points
+##Nested REGEX: First gather the three characters before the string 'points' plus the string itself (expressed by the three full stops), and then only return digits of those results (expressed by r"\d+"). Key assumption: Points achieved do not exceed three digits.
+
+,REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)......DISTANCE"), r"\d+.+\d") distance_mi
+##Nested REGEX: First gather the six characters before the string 'distance' plus the string itself (expressed by the three full stops). The result is e.g., '10.2miDistance'. Then only return digits and decimal points of those results. Key assumption: Miles ridden do not exceed 99.9.
+
+,REGEXP_EXTRACT(REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)......avg/maxrpm") , r"^.{3}") , r"\d+") avg_rpm
+##Nested REGEX: First gather the six characters before the string 'avg/maxrpm' plus the string itself (expressed by the three full stops). The result is e.g., '71/134AVG/MAXRPM'. Then only return the first three characters (symbolised by "r"&.{3}") of those results. Finally, of those results, return only the numbers (removing slashes etc). Key assumption: Avg RPMs do not exceed three digits. 
+
+,REGEXP_EXTRACT(REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)......avg/maxrpm") , r"(?i)...AVG") , r"\d+") max_rpm
+##Nested REGEX: First gather the six characters before the string 'avg/maxrpm' plus the string itself (expressed by the three full stops). The result is e.g., '71/134AVG/MAXRPM'. Then only return the three characters before the string 'AVG'. Finally, of those results, return only the digits (removing slashes/random characters etc). Key assumption: Max RPMs do not exceed three digits. 
+
+,REGEXP_EXTRACT(REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i).......avg/maxwatts") , r"^.{3}") , r"\d+") avg_watts
+##Same as Avg RPM approach
+
+,REGEXP_EXTRACT(REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)......avg/maxwatts") , r"(?i)...AVG") , r"\d+") max_watts
+##Same as Max RPM approach
+
+,CASE WHEN REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)..RANK"), r"\d+") IS NULL THEN REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)..CLASSRANK"), r"\d+") 
+ELSE REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)..RANK"), r"\d+") END AS rank
+## Conditional nested REGEX statements: The spin studio changed their e-mail data structure after 28 March 2021. The verbiage went from "5RANK" to denote 5th rank in class to "3ClassRank". Statement prepares REGEX patterns for both types of verbiage and leverages conditional logic to surface one or the other in case of a NULL result. Key assumption: Rank does not exceed two digits. 
+
+FROM results_stage)
+
+### QUERY PART 3 OF 3 - Remove a duplicate entry from 22 November 2020. Spin class had a systems glitch that day. The glitch entry includes small value metrics such as a calorie burn of 7. 
+
+select * except (body_clean)
+from results_clean
+where 1=1
+and concat(ride_date, calories) <> '2020-11-227'
+
+### End query
+
+```
+
+
+
+Let's compare our original July 4th e-mail example to the parsed results.
+![](/Users/jessicachew/Documents/R training/muck_around/rukus_screen_shot.png)
+
+![](/Users/jessicachew/Documents/R training/muck_around/clean_result.png)
+
+
+
+Looking good! You can also check out the Python approach below. Otherwise, enjoy your next step of analysis!
+
+
+### Step 2 & 3: Python Approch - Piping in data to a scripting environment
+
+
+Fab! You have now pulled your e-mail data into a spreadsheet at scale! But of course any data we encounter in the wild is going to be messy. 
+
+We can use Python to conduct our Google sheets data transformation and produce the below cleansed output.
+![](/Users/jessicachew/Documents/R training/muck_around/python_rukus_output.png)
+
+
+Below are the annotated steps to transforming the raw Google sheets data into a clean and useable output dataset in Python. 
+
+```
+### Python script starts
+
+import pandas as pd
+import numpy as np
+import datetime 
+import re
+import base64  
+from IPython.display import HTML
+
+## Pipe in raw Google sheets data from your computer. I saved a CSV version of the Google sheets data.
+df = pd.read_csv('/Users/jessicachew/Downloads/rukus_results_raw.csv')
+
+## Convert Date from a datetime format to a date format. 
+df['ride_date'] = pd.to_datetime(df['Date']).dt.date 
+
+## Reduce the dataframe to the two main data points of interest
+df = df.filter(items=['ride_date', 'Body'])
+
+## Filter out any entries related to 'Impulse' classes. 
+## I am focusing in 'Prime' ride classes which are the majority that I took.
+df = df[~df['Body'].str.contains('Impulse', na=False)]
+
+## Remove line breaks from the raw body data part 1 of 2
+df = df.replace(to_replace=r'\n',value='', regex=True)
+
+## Remove line breaks from the raw body data part 2 of 2
+df = df.replace(to_replace=r'\r',value='', regex=True)
+
+## Remove all empty spces from the the data. This will help standardise the parsing later on.
+df = df.replace(to_replace=r' ',value='', regex=True)
+
+###### Reduce body text to first 200 characters
+search = []    
+for values in df['Body']:
+    search.append(re.search(r'^.{200}', values).group())
+
+df['body_clean'] = search
+
+###### Extract calories data 1 of 2
+## First gather the three characters before the string 'calories' plus the string itself (expressed by the three full stops)
+search = []    
+for values in df['body_clean']:
+    search.append(re.search(r'(?i)...CALORIES', values).group())
+
+df['calories'] = search
+
+###### Extract calories data 2 of 2
+## Only return digits of the results. Key assumption: Calories burned do not exceed three digits.
+
+search = []    
+for values in df['calories']:
+    search.append(re.search(r'\d+', values).group())
+
+df['calories'] = search
+
+###### Extract points data 1 of 2
+## Same principle as above
+search = []    
+for values in df['body_clean']:
+    search.append(re.search(r'(?i)...POINTS', values).group())
+
+df['points'] = search
+
+###### Extract points data 2 of 2
+## Same principle as above
+search = []    
+for values in df['points']:
+    search.append(re.search(r'\d+', values).group())
+
+df['points'] = search
+
+###### Extract distance data 1 of 2
+## First gather the six characters before the string 'distance' plus the string itself (expressed by the three full stops). The result is e.g., '10.2miDistance'
+search = []    
+for values in df['body_clean']:
+    search.append(re.search(r'(?i)......DISTANCE', values).group())
+
+df['distance_mi'] = search
+
+###### Extract distance data 2 of 2
+## Only return digits and decimal points of those results. Key assumption: Miles ridden do not exceed 99.9.
+search = []    
+for values in df['distance_mi']:
+    search.append(re.search(r'\d+.+\d', values).group())
+
+df['distance_mi'] = search
+
+###### Extract avg_rpm data 1 of 3
+## First gather the six characters before the string 'avg/maxrpm' plus the string itself (expressed by the three full stops). The result is e.g., '71/134AVG/MAXRPM'
+search = []    
+for values in df['body_clean']:
+    search.append(re.search(r'(?i)......avg/maxrpm', values).group())
+
+df['avg_rpm'] = search
+
+###### Extract avg_rpm data 2 of 3
+## Only return the first three characters (symbolised by "r'&.{3}'') of those results.
+search = []    
+for values in df['avg_rpm']:
+    search.append(re.search(r'^.{3}', values).group())
+
+df['avg_rpm'] = search
+
+###### Extract avg_rpm data 3 of 3
+## Return only the numbers (removing slashes etc). Key assumption: Avg RPMs do not exceed three digits. 
+search = []    
+for values in df['avg_rpm']:
+    search.append(re.search(r'\d+', values).group())
+
+df['avg_rpm'] = search
+
+###### Extract max_rpm data 1 of 3
+## Same principle for step 1 of 3 in the avg_rpm section
+search = []    
+for values in df['body_clean']:
+    search.append(re.search(r'(?i)......avg/maxrpm', values).group())
+
+df['max_rpm'] = search
+
+###### Extract max_rpm data 2 of 3
+## Return the three characters before the string 'AVG'
+search = []    
+for values in df['max_rpm']:
+    search.append(re.search(r'(?i)...AVG', values).group())
+
+df['max_rpm'] = search
+
+###### Extract max_rpm data 3 of 3
+## Same principle for step 3 of 3 in the avg_rpm section
+search = []    
+for values in df['max_rpm']:
+    search.append(re.search(r'\d+', values).group())
+
+df['max_rpm'] = search
+
+###### Extract avg_watts data 1 of 3
+## Same principle for avg_rpm section
+search = []    
+for values in df['body_clean']:
+    search.append(re.search(r'(?i).......avg/maxwatts', values).group())
+
+df['avg_watts'] = search
+
+###### Extract avg_watts data 2 of 3
+## Same principle for avg_rpm section
+search = []    
+for values in df['avg_watts']:
+    search.append(re.search(r'^.{3}', values).group())
+
+df['avg_watts'] = search
+
+###### Extract avg_watts data 3 of 3
+## Same principle for avg_rpm section
+search = []    
+for values in df['avg_watts']:
+    search.append(re.search(r'\d+', values).group())
+
+df['avg_watts'] = search
+
+###### Extract max_watts data 1 of 3
+## Same principle for max_rpm section
+search = []    
+for values in df['body_clean']:
+    search.append(re.search(r'(?i)......avg/maxwatts', values).group())
+
+df['max_watts'] = search
+
+###### Extract max_watts data 2 of 3
+## Same principle for max_rpm section
+search = []    
+for values in df['max_watts']:
+    search.append(re.search(r'(?i)...AVG', values).group())
+
+df['max_watts'] = search
+
+###### Extract max_watts data 3 of 3
+## Same principle for max_rpm section
+search = []    
+for values in df['max_watts']:
+    search.append(re.search(r'\d+', values).group())
+
+df['max_watts'] = search
+
+## Temporarily halving the dataframe. 
+## The spin studio changed their e-mail data structure after 28 March 2021. 
+## The verbiage went from "5RANK" to denote 5th rank in class to "3ClassRank".
+## Create two temporary dataframes, one for each type of verbiage to apply custom regex for each scenario.
+
+## Create temp df 1
+pre_change_start = pd.to_datetime("2020-1-01").date() ##arbitrary start date - before I started spin class
+pre_change_end = pd.to_datetime("2021-3-28").date()
+
+after_start_date = df["ride_date"] > pre_change_start
+before_end_date = df["ride_date"] <= pre_change_end
+between_two_dates = after_start_date & before_end_date
+df_temp_1 = df.loc[between_two_dates]
+
+## Create temp df 2
+post_change_start = pd.to_datetime("2021-3-28").date()
+post_change_end = pd.to_datetime("2022-3-28").date() ##arbitrary future end date
+
+after_start_date = df["ride_date"] > post_change_start
+before_end_date = df["ride_date"] <= post_change_end
+between_two_dates = after_start_date & before_end_date
+df_temp_2 = df.loc[between_two_dates]
+
+###### Extract df_temp_1 rank 1 of 2
+search = []    
+for values in df_temp_1['body_clean']:
+    search.append(re.search(r'(?i)..RANK', values).group())
+
+df_temp_1['rank1'] = search
+
+###### Extract df_temp_1 rank 2 of 2
+search = []    
+for values in df_temp_1['rank1']:
+    search.append(re.search(r'\d+', values).group())
+
+df_temp_1['rank1'] = search
+
+###### Extract df_temp_2 rank 1 of 2
+search = []    
+for values in df_temp_2['body_clean']:
+    search.append(re.search(r'(?i)..CLASSRANK', values).group())
+
+df_temp_2['rank2'] = search
+
+###### Extract df_temp_2 rank 2 of 2
+search = []    
+for values in df_temp_2['rank2']:
+    search.append(re.search(r'\d+', values).group())
+
+df_temp_2['rank2'] = search
+
+###### Union the two dataframes back together. For entries up until 28 March 2021, rank 1 will have entries whilst rank 2 will show null. After this date, the inverse will occur.
+frames = [df_temp_1, df_temp_2]
+df = pd.concat(frames)
+
+##### Create a final clean rank that surfaces a rank number where either rank 1 or rank 2 is null.
+df['rank'] = np.select(
+[
+    (df['rank1'].isnull())
+], 
+[
+    df['rank2']
+], 
+
+default=df['rank1'])
+
+##### Remove a duplicate entry from 22 November 2020. Spin class had a systems glitch that day. 
+##### The glitch entry includes small value metrics such as a calorie burn of 7.
+##### Create a unique fingerprint by concatenating the below metrics
+df['tempconcat'] = df['calories'] + df['points'] + df['distance_mi'] + df['avg_rpm']
+
+##### The concatenated calories, points, distance and avg_rpm of the offending entry is '72550.485'. Let's exclude it.
+df = df[~df['tempconcat'].str.contains('72550.485', na=False)]
+
+##### Penultimate step - let's select the final columns necessary for our output table. 
+df = df.filter(items=['ride_date', 'calories', 'points','distance_mi','avg_rpm','max_rpm','avg_watts','max_watts','rank'])
+df
+
+# ##Export download link for summary for analysis
+
+def create_download_link(df, title = "Download CSV file", filename = "df.csv"):  
+    csv = df.to_csv(index =False)
+    b64 = base64.b64encode(csv.encode())
+    payload = b64.decode()
+    html = '<a download="{filename}" href="data:text/csv;base64,{payload}" target="_blank">{title}</a>'
+    html = html.format(payload=payload,title=title,filename=filename)
+    return HTML(html)
+create_download_link(df)
+
+### End script
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
