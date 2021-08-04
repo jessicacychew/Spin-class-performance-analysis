@@ -2,7 +2,7 @@
 runtime: shiny
 title: Spin Class Analysis
 author: Jessica Chew | 4 August 2021 | [GitHub](https://github.com/jessicacychew/Spin-class-performance-analysis)
-output: 
+output:
   html_document:
     theme: lumen
     toc: true
@@ -22,7 +22,7 @@ output:
 # Introduction & Motivation
 I have been attending a spin studio that uses smart bikes and after each session I receive an e-mail summarising my key metrics such as miles travelled, calories burned, average RPMs and class rank amongst other things.
 
-I was curious as to my performance trends over time and given that I can't access the studio's app for reporting, I decided to scrape the data from each individual e-mail into a dataset for analysis and visualisation. 
+I was curious as to my performance trends over time and given that I can't access the studio's app for reporting, I decided to scrape the data from each individual e-mail into a dataset for analysis and visualisation.
 
 This analysis has three parts:
 
@@ -43,11 +43,13 @@ We are going to extract the data from our Gmail accounts with Google Apps Script
 
 In short, it's JavaScript in a native Google environment that is very nifty!
 
-Here is an example of the original spin class' performance summary e-mail. 
+Here is an example of the original spin class' performance summary e-mail.
 
-<img style='border:1px solid #D3D3D3', src="rukus_screen_shot.png"/>
 
-Our objective is to extract, transform and load the key metrics from each of these spin class e-mails into a dataframe ready for analysis. 
+<img src="rukus_screen_shot.png" style='border:1px solid #D3D3D3'/>
+
+
+Our objective is to extract, transform and load the key metrics from each of these spin class e-mails into a dataframe ready for analysis.
 
 Target metrics:
 
@@ -59,13 +61,13 @@ Target metrics:
 * Avg Watts
 * Max Watts
 
-The overall process is: 
+The overall process is:
 
 1. Use Gmail App Scripts to extract the data from Gmail into a Google sheet;
 2. Pipe the Google sheet data into a SQL or other scripting environment for efficient manipulation;
 3. Pre-process the raw e-mail data and parse out relevant metrics to create the final dataset ready for analysis.
 
-For steps 2 & 3 I will provide both a BigQuery and Python option. 
+For steps 2 & 3 I will provide both a BigQuery and Python option.
 
 The raw data pulled straight out of Google sheets is also available in my [GitHub repo](https://github.com/jessicacychew/Spin-class-performance-analysis) under 'rukus_results_raw.csv'.
 
@@ -73,13 +75,13 @@ The raw data pulled straight out of Google sheets is also available in my [GitHu
 
 Here we will extract the data out of Gmail into a Google Sheet.
 
-First and foremost credit must go to Code Wondo and his extremely helpful YouTube tutorial [here](https://www.youtube.com/watch?v=gdgCVqtcIw4&ab_channel=CodeWondo). As he has already done an excellent job in his tutorial, I highly recommend watching his video for the broad overview of how to open a fresh Google sheet, access the scripting environment, grant access permissions and get started with key syntax. 
+First and foremost credit must go to Code Wondo and his extremely helpful YouTube tutorial [here](https://www.youtube.com/watch?v=gdgCVqtcIw4&ab_channel=CodeWondo). As he has already done an excellent job in his tutorial, I highly recommend watching his video for the broad overview of how to open a fresh Google sheet, access the scripting environment, grant access permissions and get started with key syntax.
 
 Here is what my raw ride results data look like freshly pulled from my Gmail to Google sheets. (Note I hard coded the column headers.)
 
-<img style='border:1px solid #D3D3D3', src="rukus_into_googlesheet.png"/>
+<img src="rukus_into_googlesheet.png" style='border:1px solid #D3D3D3'/>
 
-Please find below the code I used to extract the date, sender, subject and body content from each individual spin class e-mail. 
+Please find below the code I used to extract the date, sender, subject and body content from each individual spin class e-mail.
 
 ### Apps script code
 
@@ -117,37 +119,37 @@ function extractDetails(message){
 ```
 ## Step 2a (BigQuery): Piping in data to a scripting environment
 
-Fab! You have now pulled your e-mail data into a spreadsheet at scale! But of course any data we encounter in the wild is going to be messy. There are many ways to manipulate and clean up dataframes from Excel, Google sheets, Python and R amongst others. SQL is my default weapon of choice. (That's what you get for cutting your analytics teeth as a straight up data analyst - but I digress.) 
+Fab! You have now pulled your e-mail data into a spreadsheet at scale! But of course any data we encounter in the wild is going to be messy. There are many ways to manipulate and clean up dataframes from Excel, Google sheets, Python and R amongst others. SQL is my default weapon of choice. (That's what you get for cutting your analytics teeth as a straight up data analyst - but I digress.)
 
-I have a [free tier account](https://cloud.google.com/free/?gclid=Cj0KCQjw_8mHBhClARIsABfFgpjrah5ClIsBnwJh5sCZNK70IXVwezo7fA8LPfvk65ttnkKLixF4-ioaArX9EALw_wcB&gclsrc=aw.ds) with Google Cloud Platform which allows me access to BigQuery (done are my days wrangling MySQL instances and its clunky interface). 
+I have a [free tier account](https://cloud.google.com/free/?gclid=Cj0KCQjw_8mHBhClARIsABfFgpjrah5ClIsBnwJh5sCZNK70IXVwezo7fA8LPfvk65ttnkKLixF4-ioaArX9EALw_wcB&gclsrc=aw.ds) with Google Cloud Platform which allows me access to BigQuery (done are my days wrangling MySQL instances and its clunky interface).
 
-Since I only have the free sandbox version of BQ, I cannot stream in the Google sheets data using commands. Instead I will use the BQ console to manually create a table of raw spin class results. You can also use whatever version of SQL you have access to. You can pipe the data in per your familiarity and rejoin us at step 3. 
+Since I only have the free sandbox version of BQ, I cannot stream in the Google sheets data using commands. Instead I will use the BQ console to manually create a table of raw spin class results. You can also use whatever version of SQL you have access to. You can pipe the data in per your familiarity and rejoin us at step 3.
 
 BQ manual load steps:
 
 1. Create a project in your BQ space. I called my project 'rukus'.
 
-<img style='border:1px solid #D3D3D3', src="pin_project.png"/>
+<img src="pin_project.png" style='border:1px solid #D3D3D3'/>
 
 2. Go back to your Google sheet and copy the sharing link by clicking on the top right green 'Share' button. The sheet does not need to be made public.
 
 3. On BQ in the Query Editor of your new project, click the '+' button to create a new table.
 
-<img style='border:1px solid #D3D3D3', src="create_table_button.png"/>
+<img src="create_table_button.png" style='border:1px solid #D3D3D3'/>
 
 4. Follow the prompts below to ingest the Google sheet data into a table in BQ.
 
-<img style='border:1px solid #D3D3D3', src="create_table.png"/>
+<img src="create_table.png" style='border:1px solid #D3D3D3'/>
 
-5. Great, we've now piped in the Google sheets data into BQ - ready for speedier code-based data transformation. 
+5. Great, we've now piped in the Google sheets data into BQ - ready for speedier code-based data transformation.
 
-<img style='border:1px solid #D3D3D3', src="raw_data_bq.png"/>
+<img src="raw_data_bq.png" style='border:1px solid #D3D3D3'/>
 
-## Step 3a (BigQuery): Data pre-processing 
+## Step 3a (BigQuery): Data pre-processing
 
 The exciting part - we are now ready to cleanse and parse out the relevant spin class metrics into a squeaky clean dataset! Here's what we're aiming for.
 
-<img style='border:1px solid #D3D3D3', src="clean_result_head.png"/>
+<img src="clean_result_head.png" style='border:1px solid #D3D3D3'/>
 
 ### Query
 Please find detailed comments on each element of the query below to achieve the above output.
@@ -158,7 +160,7 @@ Please find detailed comments on each element of the query below to achieve the 
 WITH results_stage AS
 (
 SELECT cast(date as date) ride_date, REGEXP_EXTRACT(REPLACE(REPLACE(REPLACE(body, '\r', ''), '\n', ''), " ",""), r"^.{200}") body_clean
-## Above replace and regex statements remove the carriage lines from the raw data, eliminates all blank spaces to concatenate all characters and finally keeps only the first 200 characters as they carry relevant data. 
+## Above replace and regex statements remove the carriage lines from the raw data, eliminates all blank spaces to concatenate all characters and finally keeps only the first 200 characters as they carry relevant data.
 FROM `boxwood-airport-304120.rukus.rukus_results_raw`
 WHERE 1=1
 AND Date is not null
@@ -169,10 +171,10 @@ AND LOWER(Body) NOT LIKE '%impulse%' -- we are only interested in the Rukus Prim
 
 , results_clean AS
 
-(SELECT 
+(SELECT
 ride_date
-,body_clean 
-,REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)...CALORIES"), r"\d+") calories 
+,body_clean
+,REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)...CALORIES"), r"\d+") calories
 ##Nested REGEX: First gather the three characters before the string 'calories' plus the string itself (expressed by the three full stops), and then only return digits of those results. Key assumption: Calories burned do not exceed three digits.
 
 ,REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)...POINTS"), r"\d+") points
@@ -182,10 +184,10 @@ ride_date
 ##Nested REGEX: First gather the six characters before the string 'distance' plus the string itself (expressed by the three full stops). The result is e.g., '10.2miDistance'. Then only return digits and decimal points of those results. Key assumption: Miles ridden do not exceed 99.9.
 
 ,REGEXP_EXTRACT(REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)......avg/maxrpm") , r"^.{3}") , r"\d+") avg_rpm
-##Nested REGEX: First gather the six characters before the string 'avg/maxrpm' plus the string itself (expressed by the three full stops). The result is e.g., '71/134AVG/MAXRPM'. Then only return the first three characters (symbolised by "r"&.{3}") of those results. Finally, of those results, return only the numbers (removing slashes etc). Key assumption: Avg RPMs do not exceed three digits. 
+##Nested REGEX: First gather the six characters before the string 'avg/maxrpm' plus the string itself (expressed by the three full stops). The result is e.g., '71/134AVG/MAXRPM'. Then only return the first three characters (symbolised by "r"&.{3}") of those results. Finally, of those results, return only the numbers (removing slashes etc). Key assumption: Avg RPMs do not exceed three digits.
 
 ,REGEXP_EXTRACT(REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)......avg/maxrpm") , r"(?i)...AVG") , r"\d+") max_rpm
-##Nested REGEX: First gather the six characters before the string 'avg/maxrpm' plus the string itself (expressed by the three full stops). The result is e.g., '71/134AVG/MAXRPM'. Then only return the three characters before the string 'AVG'. Finally, of those results, return only the digits (removing slashes/random characters etc). Key assumption: Max RPMs do not exceed three digits. 
+##Nested REGEX: First gather the six characters before the string 'avg/maxrpm' plus the string itself (expressed by the three full stops). The result is e.g., '71/134AVG/MAXRPM'. Then only return the three characters before the string 'AVG'. Finally, of those results, return only the digits (removing slashes/random characters etc). Key assumption: Max RPMs do not exceed three digits.
 
 ,REGEXP_EXTRACT(REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i).......avg/maxwatts") , r"^.{3}") , r"\d+") avg_watts
 ##Same as Avg RPM approach
@@ -193,13 +195,13 @@ ride_date
 ,REGEXP_EXTRACT(REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)......avg/maxwatts") , r"(?i)...AVG") , r"\d+") max_watts
 ##Same as Max RPM approach
 
-,CASE WHEN REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)..RANK"), r"\d+") IS NULL THEN REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)..CLASSRANK"), r"\d+") 
+,CASE WHEN REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)..RANK"), r"\d+") IS NULL THEN REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)..CLASSRANK"), r"\d+")
 ELSE REGEXP_EXTRACT(REGEXP_EXTRACT(body_clean, r"(?i)..RANK"), r"\d+") END AS rank
-## Conditional nested REGEX statements: The spin studio changed their e-mail data structure after 28 March 2021. The verbiage went from "5RANK" to denote 5th rank in class to "3ClassRank". Statement prepares REGEX patterns for both types of verbiage and leverages conditional logic to surface one or the other in case of a NULL result. Key assumption: Rank does not exceed two digits. 
+## Conditional nested REGEX statements: The spin studio changed their e-mail data structure after 28 March 2021. The verbiage went from "5RANK" to denote 5th rank in class to "3ClassRank". Statement prepares REGEX patterns for both types of verbiage and leverages conditional logic to surface one or the other in case of a NULL result. Key assumption: Rank does not exceed two digits.
 
 FROM results_stage)
 
-### QUERY PART 3 OF 3 - Remove a duplicate entry from 22 November 2020. Spin class had a systems glitch that day. The glitch entry includes small value metrics such as a calorie burn of 7. 
+### QUERY PART 3 OF 3 - Remove a duplicate entry from 22 November 2020. Spin class had a systems glitch that day. The glitch entry includes small value metrics such as a calorie burn of 7.
 
 select * except (body_clean)
 from results_clean
@@ -215,12 +217,12 @@ and concat(ride_date, calories) <> '2020-11-227'
 Let's compare our original July 4th e-mail example to the parsed results.
 
 _Original e-mail_
-<img style='border:1px solid #D3D3D3', src="rukus_screen_shot.png"/>
+<img src="rukus_screen_shot.png" style='border:1px solid #D3D3D3'/>
 
 
 <br>
 _Parsed results_
-<img style='border:1px solid #D3D3D3', src="clean_result.png"/>
+<img src="clean_result.png" style='border:1px solid #D3D3D3'/>
 
 Looking good! You can also check out the Python approach below. Otherwise, onto your next step of analysis!
 
@@ -228,21 +230,21 @@ Looking good! You can also check out the Python approach below. Otherwise, onto 
 ## Step 2 & 3 (Python): Data pre-processing
 
 
-Fab! You have now pulled your e-mail data into a spreadsheet at scale! But of course any data we encounter in the wild is going to be messy. 
+Fab! You have now pulled your e-mail data into a spreadsheet at scale! But of course any data we encounter in the wild is going to be messy.
 
 We can use Python to conduct our Google sheets data transformation and produce the below cleansed output.
 
-<img style='border:1px solid #D3D3D3', src="python_rukus_output.png"/>
+<img src="python_rukus_output.png" style='border:1px solid #D3D3D3'/>
 
 ### Python script
-Below are the annotated steps to transforming the raw Google sheets data into a clean and useable output dataset in Python. 
+Below are the annotated steps to transforming the raw Google sheets data into a clean and useable output dataset in Python.
 
 ```
 ### Python script starts
 
 import pandas as pd
 import numpy as np
-import datetime 
+import datetime
 import re
 import base64  
 from IPython.display import HTML
@@ -250,13 +252,13 @@ from IPython.display import HTML
 ## Pipe in raw Google sheets data from your computer. I saved a CSV version of the Google sheets data.
 #df = pd.read_csv('/Users/jessicachew/Downloads/rukus_results_raw.csv')
 
-## Convert Date from a datetime format to a date format. 
-df['ride_date'] = pd.to_datetime(df['Date']).dt.date 
+## Convert Date from a datetime format to a date format.
+df['ride_date'] = pd.to_datetime(df['Date']).dt.date
 
 ## Reduce the dataframe to the two main data points of interest
 df = df.filter(items=['ride_date', 'Body'])
 
-## Filter out any entries related to 'Impulse' classes. 
+## Filter out any entries related to 'Impulse' classes.
 ## I am focusing in 'Prime' ride classes which are the majority that I took.
 df = df[~df['Body'].str.contains('Impulse', na=False)]
 
@@ -342,7 +344,7 @@ for values in df['avg_rpm']:
 df['avg_rpm'] = search
 
 ###### Extract avg_rpm data 3 of 3
-## Return only the numbers (removing slashes etc). Key assumption: Avg RPMs do not exceed three digits. 
+## Return only the numbers (removing slashes etc). Key assumption: Avg RPMs do not exceed three digits.
 search = []    
 for values in df['avg_rpm']:
     search.append(re.search(r'\d+', values).group())
@@ -421,8 +423,8 @@ for values in df['max_watts']:
 
 df['max_watts'] = search
 
-## Temporarily halving the dataframe. 
-## The spin studio changed their e-mail data structure after 28 March 2021. 
+## Temporarily halving the dataframe.
+## The spin studio changed their e-mail data structure after 28 March 2021.
 ## The verbiage went from "5RANK" to denote 5th rank in class to "3ClassRank".
 ## Create two temporary dataframes, one for each type of verbiage to apply custom regex for each scenario.
 
@@ -480,14 +482,14 @@ df = pd.concat(frames)
 df['rank'] = np.select(
 [
     (df['rank1'].isnull())
-], 
+],
 [
     df['rank2']
-], 
+],
 
 default=df['rank1'])
 
-##### Remove a duplicate entry from 22 November 2020. Spin class had a systems glitch that day. 
+##### Remove a duplicate entry from 22 November 2020. Spin class had a systems glitch that day.
 ##### The glitch entry includes small value metrics such as a calorie burn of 7.
 ##### Create a unique fingerprint by concatenating the below metrics
 df['tempconcat'] = df['calories'] + df['points'] + df['distance_mi'] + df['avg_rpm']
@@ -495,7 +497,7 @@ df['tempconcat'] = df['calories'] + df['points'] + df['distance_mi'] + df['avg_r
 ##### The concatenated calories, points, distance and avg_rpm of the offending entry is '72550.485'. Let's exclude it.
 df = df[~df['tempconcat'].str.contains('72550.485', na=False)]
 
-##### Penultimate step - let's select the final columns necessary for our output table. 
+##### Penultimate step - let's select the final columns necessary for our output table.
 df = df.filter(items=['ride_date', 'calories', 'points','distance_mi','avg_rpm','max_rpm','avg_watts','max_watts','rank'])
 df
 
@@ -519,8 +521,8 @@ knitr::include_url("https://public.tableau.com/views/Spinboard/Spinboard?:showVi
 
 
 # 3. Exploratory analysis
-
-This section extends the above Tableau reporting further and examines the relationships between the extracted spin class data points. 
+## 3.1. Target optmisation metric
+This section extends the above Tableau reporting further and examines the relationships between the extracted spin class data points.
 
 In particular, we are interested in what drives average watts. Watts, or power, is the gold standard metric to objectively measure a cyclist's performance. Within a cycling context it is defined as:
 
@@ -534,12 +536,13 @@ This is a nifty sports metric that is independent of factors like temperature, f
 * Compare wattage of a given ride to wattage on any other ride;
 * Compare efforts to any other rider in the world (after converting into power-to-weight ratio per the Spinboard reporting).
 
-One thing to note before we get started: the spin class e-mails do not include the average resistance setting which is a critical element of determining watts.  The instructor will recommend a resistance setting depending on the sequence. For example, for a flat road ride, the resistance will be lower compared to a heavy hill climb. 
+One thing to note before we get started: the spin class e-mails do not include the average resistance setting which is a critical element of determining watts.  The instructor will recommend a resistance setting depending on the sequence. For example, for a flat road ride, the resistance will be lower compared to a heavy hill climb.
 
 'Resistance' will vary depending on the different spin studios and different models of bike. At best I can supply that of a Rukus bike that goes up to about 20 notches of resistance, I estimate that I typically ride at a resistance level between 7 - 16, with an average of 13.
 
 So, given all of that, can the spin class dataset generate insights into how I can drive my watts performance?
 
+## 3.2. Scatterplot
 Let's load up some R libraries.
 
 ```{r, results = 'hide' , message=FALSE,setup}
@@ -568,9 +571,11 @@ tibble(df)
 
 Then, we want to understand the relationship between all the different metrics. I really like the pairplot visualisation from the Python Seaborn package for its ease of use and impactful visualisation. (It is possible to run Python in RStudio via the ```reticulate``` package but I have some operating system limitations so I ran the pairplot separately in Python.)
 
-<img style='border:1px solid #D3D3D3', src="seaborn_pairplot.png"/>
+<img src="seaborn_pairplot.png" style='border:1px solid #D3D3D3'/>
 
 We observe an inverse linear relationship between average RPM and calories and average RPM and points (scatterplots 1 and 2) and more of an interesting relationship between average RPM and watts (3). There appears to be no relationship between rank and all the other metrics. This is expected as my class rank will be relative to how strong the other riders in the class are in a given session. Put another way; if I were in a spin class with the last 10 Tour de France winners, it doesn't matter how fast I pedal, I will rank 11th!
+
+## 3.3. Correlation matrix
 
 Let's see the pearson correlation matrix between these metrics at a 95% confidence level.
 
@@ -591,15 +596,17 @@ mydata.p = corrmtx.rcorr$P
 col1 <- colorRampPalette(brewer.pal(9,"RdYlGn"))
 
 #Produce the matrix
-try(corrplot(mydata.coeff , method = "square", order = "FPC", diag = FALSE ,tl.col = "black", tl.cex = 0.75, p.mat = mydata.p, sig.level = 0.05, insig = "pch", pch.cex = 1 , col = col1(100)))
+try(corrplot(mydata.coeff , method = "square", order = "FPC", diag = FALSE,title="Spin Class Correlation Matrix" ,tl.col = "black", tl.cex = 0.75, p.mat = mydata.p, sig.level = 0.05, insig = "pch", pch.cex = 1 , col = col1(100), mar = c(1,1,1,1)))
 
 ```
 
 
 The larger the squares and the brighter the colours denote a stronger positive or negative correlation whilst squares with crosses show where the correlation is not significant (i.e., the p-value is greater than 0.05).
 
-Some intuitive results do jump out at us. Calories burned are very strongly correlated with (Rukus) points earned and distance ridden. Average watts are also strongly positively correlated with calorie burn and points earned whilst being inversely correlated with average RPM. 
+Some intuitive results do jump out at us. Calories burned are very strongly correlated with (Rukus) points earned and distance ridden. Average watts are also strongly positively correlated with calorie burn and points earned whilst being inversely correlated with average RPM.
 
-In closing out this exploratory assessment we know from the Spinboard that my average watts performance in the last year has improved in tandem with an average RPM slowdown. What's not captured but implied in the dataset is my increase in bike resistance over time which we observe generates more power and points overall, but drags down my speed. 
+## 3.4. The next spin class challenge
 
-The key takeaway and fitness challenge is to drive up my speed up from its yearlong average RPM of `r ceiling(mean(df[["avg_rpm"]]))` but not at the cost of my resistance level. I'll know that I've progressed my riding abilities when higher average RPMs become associated with higher power scores. More simply: ride heavy, but ride _fast_. 
+In closing out this exploratory assessment we know from the Spinboard that my average watts performance in the last year has improved in tandem with an average RPM slowdown. What's not captured but implied in the dataset is my increase in bike resistance over time which we observe generates more power and points overall, but drags down my speed.
+
+The key takeaway and fitness challenge is to *pick up my speed up from its yearlong average RPM of `r ceiling(mean(df[["avg_rpm"]]))` but not at the cost of my resistance level.* I'll know that I've progressed my riding abilities when higher average RPMs become associated with higher power scores. More simply: ride heavy, but ride _fast_. 
