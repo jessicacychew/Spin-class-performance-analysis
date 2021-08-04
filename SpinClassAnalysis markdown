@@ -610,3 +610,4 @@ Some intuitive results do jump out at us. Calories burned are very strongly corr
 In closing out this exploratory assessment we know from the Spinboard that my average watts performance in the last year has improved in tandem with an average RPM slowdown. What's not captured but implied in the dataset is my increase in bike resistance over time which we observe generates more power and points overall, but drags down my speed.
 
 The key takeaway and fitness challenge is to *pick up my speed up from its yearlong average RPM of `r ceiling(mean(df[["avg_rpm"]]))` but not at the cost of my resistance level.* I'll know that I've progressed my riding abilities when higher average RPMs become associated with higher power scores. More simply: ride heavy, but ride _fast_. 
+
